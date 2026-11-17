@@ -1,6 +1,8 @@
 import copy
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 import src.app as app_module
@@ -65,6 +67,23 @@ def test_signup_rejects_duplicate_participant(client):
     # Assert
     assert response.status_code == 400
     assert response.json()["detail"] == "Student already signed up for this activity"
+    assert participants.count(PARTICIPANT_EMAIL) == 1
+
+
+def test_concurrent_signups_reject_duplicate_participant(client):
+    def signup():
+        try:
+            app_module.signup_for_activity(ACTIVITY_NAME, PARTICIPANT_EMAIL)
+            return 200
+        except HTTPException as error:
+            return error.status_code
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        statuses = list(executor.map(lambda _: signup(), range(8)))
+
+    assert statuses.count(200) == 1
+    assert statuses.count(400) == 7
+    participants = client.get("/activities").json()[ACTIVITY_NAME]["participants"]
     assert participants.count(PARTICIPANT_EMAIL) == 1
 
 
