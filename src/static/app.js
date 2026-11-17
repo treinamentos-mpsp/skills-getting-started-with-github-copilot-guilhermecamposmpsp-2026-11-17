@@ -61,6 +61,17 @@ document.addEventListener("DOMContentLoaded", () => {
               </svg>
             `;
             removeButton.addEventListener("click", async () => {
+              if (document.activeElement === removeButton) {
+                const nextButton = Array.from(
+                  participantsList.querySelectorAll(".participant-remove:not(:disabled)")
+                ).find((button) => button !== removeButton);
+                if (nextButton) {
+                  nextButton.focus();
+                } else {
+                  participantsHeading.tabIndex = -1;
+                  participantsHeading.focus();
+                }
+              }
               removeButton.disabled = true;
 
               try {
